@@ -291,11 +291,40 @@ class EfficientNet(nn.Module):
             if drop_connect_rate:
                 drop_connect_rate *= float(idx) / len(self._blocks) # scale drop connect_rate
             x = block(x, drop_connect_rate=drop_connect_rate)
+            print(x.shape, idx)
 
         # Head
         x = self._swish(self._bn1(self._conv_head(x)))
-
         return x
+    
+    def extract_features_layerwise(self, inputs, idx_extract = [0,2,4,10,15]):
+        """use convolution layer to extract feature .
+
+        Args:
+            inputs (tensor): Input tensor.
+
+        Returns:
+            Output of the final convolution
+            layer in the efficientnet model.
+        """
+        # Stem
+        x = self._swish(self._bn0(self._conv_stem(inputs)))
+        extraction = []
+        # Blocks
+        b = 0
+        for idx, block in enumerate(self._blocks):
+            drop_connect_rate = self._global_params.drop_connect_rate
+            if drop_connect_rate:
+                drop_connect_rate *= float(idx) / len(self._blocks) # scale drop connect_rate
+            x = block(x, drop_connect_rate=drop_connect_rate)
+            if idx == idx_extract[b]:
+                b += 1
+                extraction.append(x) 
+        # Head
+        # x = self._swish(self._bn1(self._conv_head(x)))
+        
+        return tuple( extraction )
+
 
     def forward(self, inputs):
         """EfficientNet's forward function.
